@@ -1,41 +1,41 @@
-# function 'compute' is distributed and executed with arguments
-# supplied with 'cluster.submit' below
-def wordCounting(text):
+
+def wordCounting(text):  ##Funcion que ejecuta la tarea (Aca de define)
     import re
     wordList = re.sub("[^\w]", " ",  text).split()
     return (len(wordList))
 
-if __name__ == '__main__':
-    # executed on client only; variables created below, including modules imported,
-    # are not available in job computations
-    import dispy
-    from infrastructure.textFileController import TextFileController
-    import datetime
 
-    tiempoInicial = datetime.datetime.now()
-    print(str(tiempoInicial))
-    # distribute 'compute' to nodes; in this case, 'compute' does not have
-    # any dependencies to run on nodes
-    cluster = dispy.JobCluster(wordCounting)
-    # run 'compute' with 20 random numbers on available CPUs
+
+if __name__ == '__main__':
+
+    import dispy ## Se importa la herramienta
+    from infrastructure.textFileController import TextFileController
+    import datetime, time
+
+    cluster = dispy.JobCluster(wordCounting) ## Se inicia la herramienta, busca nodos en LAN, define la tarea
+    time.sleep(4) ## Espera a que los nodos de LAN respondan todos
+    
     folderName = "files"
     jobs = []
     filesController = TextFileController( './' + folderName)
-    files = filesController.filesNamesScan()
+    files = filesController.filesNamesScan() ## Se detecta/obtiene el nombre de todos los archivos en la carpeta FILES, se guardan en una lista
+
+    tiempoInicial = datetime.datetime.now() ## Inicia el conteo del tiempo de ejecucion
+    print("Inicio: " + str(tiempoInicial))
     for fileName in files:
-        fileContent = filesController.readFileContent(fileName)
-        job = cluster.submit(fileContent)
-        jobs.append(job)
-    # cluster.wait() # waits until all jobs finish
-    generalCounter = 0
+        fileContent = filesController.readFileContent(fileName) ## Se lee cada archivo
+        job = cluster.submit(fileContent) ## Se envia el contenido de cada archivo, a cada nodo, para contar sus palabras
+        jobs.append(job) ## Se guarda una referencia de cada nodo trabajando
+
+    generalCounter = 0 ## Contador general de palabras
+
     for job in jobs:
-        count = job() # waits for job to finish and returns results
-        generalCounter = count + generalCounter
-        # other fields of 'job' that may be useful:
-        # job.stdout, job.stderr, job.exception, job.ip_addr, job.end_time
+        job() ## Se espera a que cada proceso termine
+        generalCounter = job.result + generalCounter
+    tiempoFinal = datetime.datetime.now() ## Se toma el tiempo final de ejecucion
+    print("Final: "+str(tiempoFinal))
     print ("RESULTADO: Se han contado un total de " + str(generalCounter) + " palabras.")
-    cluster.print_status()  # shows which nodes executed how many jobs etc.
-    tiempoFinal = datetime.datetime.now()
-    print(str(tiempoFinal))
-    diferenciaTiempo = tiempoFinal - tiempoInicial
+    cluster.print_status() ## Se imprime el reporte de los nodos
+
+    diferenciaTiempo = tiempoFinal - tiempoInicial ## Se calcula el total de tiempo de ejecucion
     print("La tarea total duro " + str(diferenciaTiempo.total_seconds()) + " segundos.")
